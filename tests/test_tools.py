@@ -41,3 +41,25 @@ def test_suggest_outfit_empty_wardrobe():
     result = suggest_outfit(SAMPLE_ITEM, get_empty_wardrobe())
     assert isinstance(result, str)
     assert len(result) > 0
+
+from tools import create_fit_card
+
+SAMPLE_OUTFIT = "Pair with baggy jeans and combat boots for a grunge look."
+SAMPLE_ITEM = {
+    'title': 'Graphic Tee — 2003 Tour Bootleg Style',
+    'category': 'tops',
+    'style_tags': ['graphic tee', 'vintage', 'grunge'],
+    'colors': ['black'],
+    'description': 'Vintage-style bootleg tee',
+    'price': 24.0,
+    'platform': 'depop'
+}
+
+def test_create_fit_card_returns_string():
+    result = create_fit_card(SAMPLE_OUTFIT, SAMPLE_ITEM)
+    assert isinstance(result, str)
+    assert len(result) > 0
+
+def test_create_fit_card_empty_outfit():
+    result = create_fit_card("", SAMPLE_ITEM)
+    assert "Error" in result

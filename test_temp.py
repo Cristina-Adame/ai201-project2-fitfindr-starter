@@ -1,17 +1,11 @@
-from tools import suggest_outfit
-from utils.data_loader import get_example_wardrobe, get_empty_wardrobe
+from tools import search_listings, suggest_outfit, create_fit_card
+from utils.data_loader import get_example_wardrobe
 
-item = {
-    'title': 'Graphic Tee — 2003 Tour Bootleg Style',
-    'category': 'tops',
-    'style_tags': ['graphic tee', 'vintage', 'grunge'],
-    'colors': ['black'],
-    'description': 'Vintage-style bootleg tee'
-}
+results = search_listings("vintage graphic tee", size=None, max_price=30)
+item = results[0]
+outfit = suggest_outfit(item, get_example_wardrobe())
+print("=== Fit Card ===")
+print(create_fit_card(outfit, item))
 
-# Test with example wardrobe
-print("=== With wardrobe ===")
-print(suggest_outfit(item, get_example_wardrobe()))
-
-print("\n=== Empty wardrobe ===")
-print(suggest_outfit(item, get_empty_wardrobe()))
+print("\n=== Empty outfit test ===")
+print(create_fit_card("", item))

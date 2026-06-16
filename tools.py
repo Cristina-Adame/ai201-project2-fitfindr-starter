@@ -235,4 +235,40 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
     Before writing code, fill in the Tool 3 section of planning.md.
     """
     # Replace this with your implementation
-    return ""
+    def create_fit_card(outfit: str, new_item: dict) -> str:
+        """
+    Generate a short, shareable outfit caption for the thrifted find.
+    """
+    # Guard against empty or whitespace-only outfit string
+    if not outfit or not outfit.strip():
+        return "Error: Outfit data is missing or incomplete, unable to generate fit card."
+    
+    client = _get_groq_client()
+    
+    prompt = f"""You are a fashion-forward social media creator who posts authentic, 
+casual outfit content. Generate a 2-4 sentence Instagram/TikTok caption for this thrifted find.
+
+Item details:
+- Name: {new_item["title"]}
+- Price: ${new_item["price"]}
+- Platform: {new_item["platform"]}
+- Colors: {", ".join(new_item["colors"])}
+
+Outfit details:
+{outfit}
+
+Rules for the caption:
+- Sound casual and authentic, like a real person posting an OOTD — NOT a product description
+- Mention the item name, price, and platform naturally (once each)
+- Capture the specific vibe of the outfit
+- Be creative and unique — no generic captions
+- Use informal language, can include relevant emojis"""
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=1000,
+        temperature=1.2,
+    )
+    
+    return response.choices[0].message.content
