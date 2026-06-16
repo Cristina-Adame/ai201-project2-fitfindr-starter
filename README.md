@@ -84,6 +84,7 @@ Will return a list of listing dicts that match the description provided by the u
 **What happens if it fails or returns nothing:**
 <!-- What should the agent do if no listings match? -->
 Returns an empty list if nothing in the listings matches the user request  — does NOT raise an exception. Will not proceed to call other functions. Instead will suggest the user to edit their filters of price and size, if provided. If no filters provided, suggest adding more descriptive keywords related to the article of clothing being searched and provide examples.
+
 ---
 
 ### Tool 2: suggest_outfit
@@ -105,6 +106,8 @@ Will return a non-empty string with the outfit suggestion generated (the items f
 <!-- What should the agent do if the wardrobe is empty or no outfit can be suggested? -->
 If the wardrobe is empty, the LLM will be prompted with general styling tips/ideas for items that may pair with the article of clothing. Returns suggestion.
 
+---
+
 ### Tool 3: create_fit_card
 
 **What it does:**
@@ -123,6 +126,7 @@ A string returned as a Caption between 2-4 sentences (inclusive) that may be use
 **What happens if it fails or returns nothing:**
 <!-- What should the agent do if the outfit data is incomplete? -->
 If the outfit data is incomplete, return a string error message that the outfit data is not complete or missing and the card could not be generated - do NOT raise an exception.
+
 ---
 
 ## Planning Loop
@@ -151,10 +155,69 @@ If the outfit data is incomplete, return a string error message that the outfit 
 - Return the session
 ---
 
+## Architecture
+
+```
+User query
+    │
+    ▼
+Planning Loop (run_agent) ──────────────────────────────────────────────────────────────────────┐
+    │                                                                         					│
+    ├─► _new_session(query, wardrobe)                                            				│
+    │       │                                                                    				│
+    │       ▼                                                                    				│
+    │   LLM parses query → session: parsed = {description, size, max_price}     				│
+    │       │                                                                    				│	
+    │       ▼                                                                    				│
+    │   search_listings(description, size, max_price)                            				│
+    │       │                                                                    				│
+    │       ├─► results == []                                                    				│
+    │       │       │                                                            				│	
+    │       │       └─► [ERROR] "No listings found. Try adjusting your           				│
+    │       │                    price/size filters or use different keywords."   				│
+    │       │                        └─► Return session ───────────────────────────────────────►│
+    │       │                                                                    				│
+    │       │ results != []                                                      				│
+    │       ▼                                                                    				│
+    │   session: search_results = top 3 relevant matches                         				│
+    │   session: selected_item = results[0]                                      				│
+    │       │                                                                    				│
+    │       ▼                                                                    				│
+    │   suggest_outfit(selected_item, wardrobe)                                  				│
+    │       │                                                                    				│
+    │       ├─► wardrobe: items == []                                            				│
+    │       │       │                                                            				│
+    │       │       └─► return general styling advice                            				│
+    │       │                                                                    				│
+    │       │ wardrobe: items != []                                              				│
+    │       └─► return string with selected item and outfit pairings             				│
+    │       │                                                                    				│
+    │       ▼                                                                    				│
+    │   session: outfit_suggestion = outfit string from suggest_outfit()         				│
+    │       │                                                                    				│
+    │       ▼                                                                    				│
+    │   create_fit_card(outfit_suggestion, selected_item)                        				│
+    │       │                                                                    				│
+    │       ├─► outfit_suggestion == ""                                          				│
+    │       │       │                                                            				│
+    │       │       └─► [ERROR] "Outfit data is not complete or missing,         				│	
+    │       │                    card could not be generated."                   				│
+    │       │                        └─► Return session ───────────────────────────────────────►│
+    │       │                                                                    				│
+    │       └─► return 2-4 sentence caption                                      				│
+    │       │                                                                    				│
+    │       ▼                                                                    				│
+    │   session: fit_card = caption string from create_fit_card()                				│
+    │       │                                                                  					└───────── error path returns here
+    │       ▼                                                                    				
+    └─► Return session                           														
+```
+
 ## State Management
 
 Session is initialized with the users intial query and the wardrobe dict. The query is then parsed by the LLM with keywords of the description/size/max_price stored in parsed. Parsed is passed to search_listings as description/size/max_price. The
 relevant listings are stored in search_results with the most relevant result stored in dict selected_item. Suggest_outfit() is called with selected_item and wardrobe to generate and store string outfit_suggestion. Create_fit_card() is called with selected_item and outfit_suggestion to generate and stored in string fit_card. Any errors from the session are stored in error. Session is returned.
+
 ---
 
 
@@ -166,7 +229,7 @@ relevant listings are stored in search_results with the most relevant result sto
 | suggest_outfit | Wardrobe is empty | The LLM will be prompted with general styling tips/ideas for items that may pair with the article of clothing. Returns string suggestion.|
 | create_fit_card | Outfit input is missing or incomplete | return a string error message that the outfit data is not complete or missing and the card could not be generated - do NOT raise an exception. |
 
-**Sample Error Message:**
+**Sample Error:**
 ```text
 Example: running search_listings("designer ballgown", size="XXS", max_price=5) 
 returned [] without raising an exception. The agent responded with: 
@@ -179,9 +242,11 @@ or use different keywords."
 Having the tool specs written out with so much detail helped to implement the error handling in the correct areas. While search_listings() can return an empty list when no listings appear from the query, it is the agent that deals with the prompting to attempt a different query/filter.
 
 The spec mentions the case when no outfit can be suggested but it really will always suggests one. So the difference was that the error handling was only if the wardrobe is empty in the actual implementation. 
+
 ---
 ## AI Usage Section
 For the search_listings() error handling, in the given tool 1 spec, Claude was asked to specify to the agent that in the case of no matches for a query that the user be prompted to change their filters or to use different key words for the item. When reviewing the query that should return an empty list of matches, I verified that it included that no matches were found and that they could attempt adjusting their size, price range, or keywords. Since sizes vary and one dollar could make a big difference, this seemed helpful.
 
 Asked Claude to aid in confirming the implementation of the Planning Loop and State Management sections after being given the relevant portions of the planning.md and the agent diagram. With some test cases in the terminal, I was able to verify that after an empty list from the user query the agent did not further call suggest_outfit() or create_fit_card().
+
 ---
