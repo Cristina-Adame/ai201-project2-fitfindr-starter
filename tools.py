@@ -155,7 +155,54 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
     Before writing code, fill in the Tool 2 section of planning.md.
     """
     # Replace this with your implementation
-    return ""
+    def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
+        """
+    Given a thrifted item and the user's wardrobe, suggest 1–2 complete outfits.
+    """
+    client = _get_groq_client()
+    
+    # Check if wardrobe is empty
+    if not wardrobe["items"]:
+        prompt = f"""You are a fashion stylist specializing in thrifted and vintage clothing.
+A user just found this item:
+- Name: {new_item["title"]}
+- Category: {new_item["category"]}
+- Style tags: {", ".join(new_item["style_tags"])}
+- Colors: {", ".join(new_item["colors"])}
+- Description: {new_item["description"]}
+
+They don't have a wardrobe set up yet. Give them 1-2 general styling suggestions — 
+what kinds of pieces would pair well with this item, what vibe it suits, and how they might wear it."""
+
+    else:
+        # Format wardrobe items into a readable list
+        wardrobe_str = "\n".join([
+            f"- {item['name']} ({item['category']}, colors: {', '.join(item['colors'])}, style: {', '.join(item['style_tags'])})"
+            for item in wardrobe["items"]
+        ])
+        
+        prompt = f"""You are a fashion stylist specializing in thrifted and vintage clothing.
+A user just found this item:
+- Name: {new_item["title"]}
+- Category: {new_item["category"]}
+- Style tags: {", ".join(new_item["style_tags"])}
+- Colors: {", ".join(new_item["colors"])}
+- Description: {new_item["description"]}
+
+Their current wardrobe includes:
+{wardrobe_str}
+
+Suggest 1-2 complete outfit combinations using the new item paired with specific 
+named pieces from their wardrobe. Mention the wardrobe items by name and describe 
+the overall vibe of each outfit."""
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=1000,
+    )
+    
+    return response.choices[0].message.content
 
 
 # ── Tool 3: create_fit_card ───────────────────────────────────────────────────

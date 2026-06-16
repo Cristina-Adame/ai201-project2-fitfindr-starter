@@ -20,3 +20,24 @@ def test_search_returns_dicts():
 def test_search_max_three_results():
     results = search_listings("vintage", size=None, max_price=100)
     assert len(results) <= 3
+
+from tools import suggest_outfit
+from utils.data_loader import get_example_wardrobe, get_empty_wardrobe
+
+SAMPLE_ITEM = {
+    'title': 'Graphic Tee — 2003 Tour Bootleg Style',
+    'category': 'tops',
+    'style_tags': ['graphic tee', 'vintage', 'grunge'],
+    'colors': ['black'],
+    'description': 'Vintage-style bootleg tee'
+}
+
+def test_suggest_outfit_returns_string():
+    result = suggest_outfit(SAMPLE_ITEM, get_example_wardrobe())
+    assert isinstance(result, str)
+    assert len(result) > 0
+
+def test_suggest_outfit_empty_wardrobe():
+    result = suggest_outfit(SAMPLE_ITEM, get_empty_wardrobe())
+    assert isinstance(result, str)
+    assert len(result) > 0
