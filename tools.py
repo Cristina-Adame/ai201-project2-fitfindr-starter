@@ -70,7 +70,61 @@ def search_listings(
     Before writing code, fill in the Tool 1 section of planning.md.
     """
     # Replace this with your implementation
-    return []
+    def search_listings(
+    description: str,
+    size: str | None = None,
+    max_price: float | None = None,
+) -> list[dict]:
+        """
+    Search the mock listings dataset for items matching the description,
+    optional size, and optional price ceiling.
+    """
+    listings = load_listings()
+    
+    # Filter by max_price if provided
+    if max_price is not None:
+        listings = [item for item in listings if item["price"] <= max_price]
+    
+    # Filter by size if provided (case-insensitive)
+    if size is not None:
+        listings = [item for item in listings if size.lower() in item["size"].lower()]
+    
+    # Score each listing by keyword overlap with description
+    keywords = description.lower().split()
+    
+    def score_listing(item):
+        score = 0
+        # Check title
+        title_lower = item["title"].lower()
+        for keyword in keywords:
+            if keyword in title_lower:
+                score += 2
+        # Check description
+        desc_lower = item["description"].lower()
+        for keyword in keywords:
+            if keyword in desc_lower:
+                score += 1
+        # Check style_tags
+        tags = [tag.lower() for tag in item["style_tags"]]
+        for keyword in keywords:
+            if keyword in tags:
+                score += 2
+        # Check category
+        if item["category"].lower() in keywords:
+            score += 1
+        return score
+    
+    # Score all listings
+    scored = [(item, score_listing(item)) for item in listings]
+    
+    # Drop listings with score of 0
+    scored = [(item, score) for item, score in scored if score > 0]
+    
+    # Sort by score highest first
+    scored.sort(key=lambda x: x[1], reverse=True)
+    
+    # Return top 3 listing dicts
+    return [item for item, score in scored[:3]]
 
 
 # ── Tool 2: suggest_outfit ────────────────────────────────────────────────────

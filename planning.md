@@ -264,7 +264,7 @@ Write out what a full user interaction looks like from start to finish — tool 
 <!-- Continue until the full interaction is complete -->
 - The generated outfit string and the selected_item dict are passed to create_fit_card() where a 2-4 sentence caption is generated about the clothing item and the outfit.
      -This example:
-          - fit_card: "Found this $24 trendy Graphic Tee — 2003 Tour Bootleg Style that pairs well with Vintage black denim jacket and Baggy Carpenter Jeans — Dark Wash. Thankful for <platform-name>!"
+          - fit_card: "Found this $24 trendy Graphic Tee — 2003 Tour Bootleg Style that pairs well with Vintage black denim jacket and Baggy Carpenter Jeans — Dark Wash. Thankful for Depop!"
 - If the outfit is empty, generates error message
      - This example:
           -"ERROR: Outfit data is missing or empty."
