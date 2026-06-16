@@ -94,7 +94,7 @@ Returns a string with 1-2 outfit pairing suggestions to create an outfit based o
 
 **Input parameters:**
 <!-- List each parameter, its type, and what it represents -->
-- `new_item` (dict): ... the article of clothing that resulted from the users' search in search_listinga(). Item to be paired with other items in the users' wardrobe.
+- `new_item` (dict): ... the article of clothing that resulted from the users' search in search_listings(). Item to be paired with other items in the users' wardrobe.
 - `wardrobe` (dict): ... dict with items in the users' wardrobe, possibly empty.
 
 **What it returns:**
@@ -175,9 +175,13 @@ or use different keywords."
 ```
 ---
 
-
 ## Spec Reflection
+Having the tool specs written out with so much detail helped to implement the error handling in the correct areas. While search_listings() can return an empty list when no listings appear from the query, it is the agent that deals with the prompting to attempt a different query/filter.
+
+The spec mentions the case when no outfit can be suggested but it really will always suggests one. So the difference was that the error handling was only if the wardrobe is empty in the actual implementation. 
 ---
-
-
 ## AI Usage Section
+For the search_listings() error handling, in the given tool 1 spec, Claude was asked to specify to the agent that in the case of no matches for a query that the user be prompted to change their filters or to use different key words for the item. When reviewing the query that should return an empty list of matches, I verified that it included that no matches were found and that they could attempt adjusting their size, price range, or keywords. Since sizes vary and one dollar could make a big difference, this seemed helpful.
+
+Asked Claude to aid in confirming the implementation of the Planning Loop and State Management sections after being given the relevant portions of the planning.md and the agent diagram. With some test cases in the terminal, I was able to verify that after an empty list from the user query the agent did not further call suggest_outfit() or create_fit_card().
+---
