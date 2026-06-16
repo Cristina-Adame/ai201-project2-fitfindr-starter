@@ -17,8 +17,21 @@ Usage (once implemented):
     print(result["fit_card"])
     print(result["error"])   # None on success
 """
-
+import os
+import json
+from dotenv import load_dotenv
+from groq import Groq
 from tools import search_listings, suggest_outfit, create_fit_card
+
+load_dotenv()
+
+# ── Groq client ───────────────────────────────────────────────────────────────
+
+def _get_groq_client():
+    api_key = os.environ.get("GROQ_API_KEY")
+    if not api_key:
+        raise ValueError("GROQ_API_KEY not set.")
+    return Groq(api_key=api_key)
 
 
 # ── session state ─────────────────────────────────────────────────────────────
@@ -92,9 +105,64 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     Before writing code, complete the Planning Loop and State Management sections
     of planning.md — your implementation should match what you described there.
     """
-    # TODO: implement the planning loop
+    # Step 1: Initialize session
     session = _new_session(query, wardrobe)
-    session["error"] = "Planning loop not yet implemented."
+
+    # Step 2: Parse query with LLM
+    client = _get_groq_client()
+    parse_prompt = f"""Extract information from this clothing search query and return ONLY a JSON object with no extra text or markdown:
+- description: keywords describing the clothing item
+- size: the size mentioned, or null if none
+- max_price: the maximum price as a float, or null if none
+
+Query: "{query}"
+
+Return only this format:
+{{"description": "...", "size": null, "max_price": null}}"""
+
+    parse_response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": parse_prompt}],
+        max_tokens=200,
+    )
+
+    raw = parse_response.choices[0].message.content.strip()
+    raw = raw.replace("```json", "").replace("```", "").strip()
+    parsed = json.loads(raw)
+    session["parsed"] = parsed
+
+    # Step 3: Call search_listings
+    results = search_listings(
+        description=parsed.get("description", query),
+        size=parsed.get("size"),
+        max_price=parsed.get("max_price"),
+    )
+    session["search_results"] = results
+
+    # If no results, set error and return early
+    if not results:
+        filters = []
+        if parsed.get("size"):
+            filters.append(f"size ({parsed['size']})")
+        if parsed.get("max_price"):
+            filters.append(f"price limit (${parsed['max_price']})")
+
+        if filters:
+            session["error"] = f"No listings found. Try adjusting your {' and '.join(filters)} filters, or use different keywords."
+        else:
+            session["error"] = "No listings found. Try adding more descriptive keywords (e.g. 'vintage', 'graphic tee', 'denim jacket')."
+        return session
+
+    # Step 4: Select top result
+    session["selected_item"] = results[0]
+
+    # Step 5: Call suggest_outfit
+    session["outfit_suggestion"] = suggest_outfit(session["selected_item"], wardrobe)
+
+    # Step 6: Call create_fit_card
+    session["fit_card"] = create_fit_card(session["outfit_suggestion"], session["selected_item"])
+
+    # Step 7: Return session
     return session
 
 
